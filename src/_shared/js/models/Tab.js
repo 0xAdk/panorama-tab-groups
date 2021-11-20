@@ -1,8 +1,8 @@
 export class Tab {
-  constructor(tab) {
+  constructor(tab, groupId) {
     return (async () => {
       Object.assign(this, tab);
-      this.groupId = await getGroupId(this);
+      this.groupId = groupId;
 
       return this;
     })();

@@ -7,20 +7,12 @@ export class View {
 
   async initializeView() {
     await Promise.all([
-      // key, value, property
-      ["options", await loadOptions()],
-      ["windowId", await browser.windows.getCurrent(), "id"]
-    ]).then(results => {
-      for (const result of results) {
-        const [key, value, property] = result;
+      (async () => this.options = await loadOptions())(),
+      (async () => this.windowId = (await browser.windows.getCurrent()).id)(),
+    ])
 
-        if (typeof property !== "undefined") {
-          this[key] = value[property];
-        } else {
-          this[key] = value;
-        }
-      }
-    });
+    // TODO: make it more explicit that this requires this.window to function
+    await this.initializeTabArray();
 
     this.lastActiveTab = await this.getLastActiveTab();
     // Update lastActiveTab when changed
@@ -32,45 +24,31 @@ export class View {
     });
   }
 
-  async getAllTabs() {
-    const tabs =
-      (await browser.tabs.query({
-        windowId: this.windowId
-      })) || [];
-
-    return Promise.all(
+  async initializeTabArray() {
+    const tabs = await browser.tabs.query({ windowId: this.windowId }).catch(() => []);
+    this.tabs = await Promise.all(
       tabs.map(async tab => {
-        return new Tab(tab);
+        return {
+          tab: tab,
+          groupId: await browser.sessions.getTabValue(tab.id, 'groupId')
+        }
+      }).map(async tabInfoPromise => {
+        const tab = await tabInfoPromise;
+        return new Tab(tab.tab, tab.groupId);
       })
     );
+  }
+
+  async getAllTabs() {
+    return this.tabs;
   }
 
   async getTabs() {
-    const tabs =
-      (await browser.tabs.query({
-        windowId: this.windowId,
-        pinned: false
-      })) || [];
-
-    return Promise.all(
-      tabs.map(async tab => {
-        return new Tab(tab);
-      })
-    );
+    return this.tabs.filter(tab => !tab.pinned);
   }
 
   async getPinnedTabs() {
-    const tabs =
-      (await browser.tabs.query({
-        windowId: this.windowId,
-        pinned: true
-      })) || [];
-
-    return Promise.all(
-      tabs.map(async tab => {
-        return new Tab(tab);
-      })
-    );
+    return this.tabs.filter(tab => tab.pinned);
   }
 
   async getLastActiveTab() {
