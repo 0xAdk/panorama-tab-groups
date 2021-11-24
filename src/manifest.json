@@ -6,7 +6,7 @@
     "default_locale": "en",
     "applications": {
         "gecko": {
-            "id": "panorama-tab-groups@example.com"
+            "id": "personal-panorama-tab-groups-fork@example.com"
         }
     },
     "icons": {
